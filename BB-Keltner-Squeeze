@@ -1,0 +1,54 @@
+//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// Modified by Juan C for FVBO Strategy, some source code from Trader-Elisa
+
+study(title="BB-Keltner Squeeze-FVBO-2.0", overlay=true)
+
+length = input(20, minval=1, title="Length")
+src = input(close, title="Source")
+
+// 2 Standard Deviation Bollinger Bands
+
+B2mult = input(2.0, minval=0.001, maxval=50, title="BB Standard Deviation")
+B2basis = sma(src, length)
+B2dev = B2mult * stdev(src, length)
+B2upper = B2basis + B2dev
+B2lower = B2basis - B2dev
+
+
+plot(B2basis, color=#9c27b0, style=plot.style_cross, linewidth=2)
+p1 = plot(B2upper, color=#673ab7, linewidth=2, title="Band 2SD upper", style=plot.style_stepline)
+p2 = plot(B2lower, color=#673ab7, linewidth=2, title="Band 2SD lower", style=plot.style_stepline)
+
+
+
+// 1.5 Keltner channels
+useTrueRange = input(true)
+
+Kmult = input(1.5, title="Keltner Range")
+Kma = ema(src, length)
+Krange = useTrueRange ? tr : high - low
+Krangema = ema(Krange, length)
+Kupper = Kma + Krangema * Kmult
+Klower = Kma - Krangema * Kmult
+
+plot(Kma, title ="Keltner Basis", color=#2196f3, style=plot.style_line, linewidth=1)
+p5 = plot(Kupper, title="Keltner upper", color=#2196f3, linewidth=1, style=plot.style_line)
+p6 = plot(Klower, title="Keltner lower", color=#2196f3, linewidth=1, style=plot.style_line)
+fill(p5, p6, color=#2196f3, title = "Keltner Channel Fill")
+
+// Highlight Crossover (Squeeze) //
+
+bb_condition = input(defval = "Both", title="Bollinger Band Crossover Condition", type = input.string, options = ["Both", "At Least One"]) 
+
+cross_over_color = if bb_condition =="Both"
+    cross_over_color = B2upper <= Kupper and B2lower >= Klower ? color.aqua : na
+else
+    cross_over_color = B2upper <= Kupper or B2lower >= Klower ? color.aqua : na
+
+bgcolor(color=cross_over_color, transp=90, title = "Cross Over Identification Color")
+
+
+// Alert Option (to trigger you need to actually set a Tradingview alert) //
+alert= B2upper <= Kupper and B2lower >= Klower ? true : false
+alertcondition(alert, title= "BB-Kelt Squeeze", message= "BB Kelt Squeeze")
